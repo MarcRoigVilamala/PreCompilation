@@ -78,3 +78,61 @@ if __name__ == '__main__':
 
     for k, v in results.items():
         print('{} -> {}'.format(k, v))
+
+    print()
+
+    results = precomp.perform_queries(
+        queries=[
+            # Timestamp 0
+            FeedbackQuery('atTime', 0),
+            # Timestamp 1
+            FeedbackQuery('atTime', 1),
+            # Timestamp 2
+            FeedbackQuery('atTime', 2),
+            # Timestamp 3
+            FeedbackQuery('atTime', 3),
+            # Timestamp 4
+            FeedbackQuery('atTime', 4),
+        ],
+        input_events=[
+            # Timestamp 0
+            FeedbackClause('increase', 0, 0.4),
+            # Timestamp 1
+            # Timestamp 2
+            FeedbackClause('increase', 2, 0.2),
+            # Timestamp 3
+            FeedbackClause('decrease', 3, 0.5),
+            # Timestamp 4
+            FeedbackClause('increase', 4, 0.3),
+            FeedbackClause('decrease', 4, 0.6),
+        ],
+        use_feedback=False
+    )
+
+    for k, v in results.items():
+        print('{} -> {}'.format(k, v))
+
+    print()
+
+    results = precomp.perform_queries(
+        queries=[
+            # Timestamp 0
+            FeedbackQuery('atTime', 0),
+            # Timestamp 1
+            FeedbackQuery('atTime', 1),
+            # Timestamp 2
+            FeedbackQuery('atTime', 2),
+        ],
+        input_events=[
+            # Timestamp 0
+            # Timestamp 1
+            FeedbackClause('increase', 1, 0.7),
+            # Timestamp 2
+            FeedbackClause('decrease', 2, 0.9),
+        ],
+        use_feedback=True
+    )
+
+    for k, v in results.items():
+        print('{} -> {}'.format(k, v))
+

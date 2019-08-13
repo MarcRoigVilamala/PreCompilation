@@ -219,4 +219,8 @@ class Query(object):
         )
 
     def generate_feedback(self, evaluation, timestamp_difference):
-        raise NotImplementedError()
+        raise NotImplementedError(
+            'This method should return a list of objects inheriting from InputClause. This list should contain the '
+            'clauses that need to be used as a feedback. These should be created from the results found in evaluation. '
+            'Only required if feedback is being used (will not be called otherwise).'
+        )

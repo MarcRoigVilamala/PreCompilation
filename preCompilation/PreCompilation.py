@@ -1,4 +1,5 @@
 import re
+import sys
 
 from problog import get_evaluatable
 from problog.evaluator import SemiringSymbolic
@@ -108,7 +109,28 @@ class PreCompilation(object):
 
 
 class PreCompilationArguments(object):
-    def __init__(self, input_clauses, queries):
+    def __init__(self, input_clauses, queries, warnings=True):
+        if warnings:
+            for c in input_clauses:
+                if not isinstance(c, InputClause):
+                    print(
+                        '{}, of class {}, is not a subclass of InputClause. This may cause problems if not all the '
+                        'abstract methods are implemented. Pass warnings=False to disable this warning.'.format(
+                            c, type(c)
+                        ),
+                        file=sys.stderr
+                    )
+
+            for q in queries:
+                if not isinstance(q, Query):
+                    print(
+                        '{}, of class {}, is not a subclass of Query. This may cause problems if not all the '
+                        'abstract methods are implemented. Pass warnings=False to disable this warning.'.format(
+                            q, type(q)
+                        ),
+                        file=sys.stderr
+                    )
+
         self.input_clauses = input_clauses
         self.queries = queries
 

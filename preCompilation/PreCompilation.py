@@ -21,9 +21,12 @@ class PreCompilation(object):
 
             nodes = self._get_nodes_for(compiled_model)
 
+            default_probs = self._get_default_probs(compiled_model, nodes)
+
             self.precompilations[query.identifier] = {
                 'model': compiled_model,
                 'nodes': nodes,
+                'default_probs': default_probs,
                 'base_timestamp': query.timestamp
             }
 
@@ -49,7 +52,10 @@ class PreCompilation(object):
 
             knowledge = precompilation['model']
 
-            self._update_knowledge_with(knowledge, input_events, timestamp_difference, precompilation['nodes'])
+            self._update_knowledge_with(
+                knowledge, input_events, timestamp_difference, precompilation['nodes'],
+                precompilation['default_probs']
+            )
 
             evaluation = knowledge.evaluate(semiring=self.semiring)
 
@@ -68,17 +74,14 @@ class PreCompilation(object):
 
         return res
 
-    def _update_knowledge_with(self, knowledge, input_events, timestamp_difference, nodes):
-        marked_probabilities = [
-            (
-                e.to_problog_with(
-                    timestamp=e.timestamp - timestamp_difference,
-                    probability=0.0
-                ),
-                e.probability
-            )
+    def _update_knowledge_with(self, knowledge, input_events, timestamp_difference, nodes, default_probs):
+        marked_probabilities = {
+            e.to_problog_with(
+                timestamp=e.timestamp - timestamp_difference,
+                probability=0.0
+            ).replace(' ', ''): e.generate_probability()
             for e in input_events
-        ]
+        }
 
         for p in self.precomp_input:
             node = nodes.get(p)
@@ -87,17 +90,15 @@ class PreCompilation(object):
                 probability = self._find_probability(marked_probabilities, p)
 
                 if probability:
-                    knowledge._weights[node] = Constant(probability)
+                    knowledge._weights[node] = probability
                 else:
-                    knowledge._weights[node] = Constant(0.0)
+                    knowledge._weights[node] = default_probs.get(node, Constant(0.0))
 
     @staticmethod
     def _find_probability(marked_probabilities, precomp_input_event):
-        for mark, probability in marked_probabilities:
-            if precomp_input_event.replace(' ', '') == mark.replace(' ', ''):
-                return probability
+        parsed_precomp_input_event = precomp_input_event.replace(' ', '')
 
-        return None
+        return marked_probabilities.get(parsed_precomp_input_event, None)
 
     def _get_nodes_for(self, knowledge, in_dict='named'):
         parsed_knowledge = {
@@ -109,6 +110,13 @@ class PreCompilation(object):
             i: parsed_knowledge[i.split('::')[1].strip()[:-1].replace(' ', '')]
             for i in self.precomp_input
             if i.split('::')[1].strip()[:-1].replace(' ', '') in parsed_knowledge
+        }
+
+    @classmethod
+    def _get_default_probs(cls, knowledge, nodes):
+        return {
+            node: knowledge._weights[node]
+            for node in nodes.values()
         }
 
 
@@ -175,6 +183,9 @@ class InputClause(object):
             'returned by this method will be used as the default probability for each case. A default probability of '
             '0 is recommended, as then you will only need to pass the events that you want to actually happen.'
         )
+
+    def generate_probability(self):
+        return Constant(self.probability)
 
     def __str__(self):
         return self.to_problog()

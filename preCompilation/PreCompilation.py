@@ -11,16 +11,13 @@ class PreCompilation(object):
     def __init__(self, precomp_args, model):
         self.precomp_input = [e.for_mock_model() for e in precomp_args.input_clauses]
 
-        model = model + '\n'.join(self.precomp_input)
+        model = model + '\n' + '\n'.join(self.precomp_input)
 
         self.precompilations = {}
         for query in precomp_args.queries:
             compiled_model = self._compile_model_with(model, query)
 
-            nodes = {
-                i: self._get_node_from_str(compiled_model, i.split('::')[1])
-                for i in self.precomp_input
-            }
+            nodes = self._get_nodes_for(compiled_model)
 
             self.precompilations[query.identifier] = {
                 'model': compiled_model,
@@ -32,7 +29,8 @@ class PreCompilation(object):
     def _compile_model_with(model, query):
         prolog_string = PrologString(query.create_from_model(model))
 
-        return get_evaluatable(name='ddnnf').create_from(prolog_string, semiring=SemiringSymbolic())
+        # return get_evaluatable(name='ddnnf').create_from(prolog_string, semiring=SemiringSymbolic())
+        return get_evaluatable(name='ddnnf').create_from(prolog_string)
 
     def perform_queries(self, queries, input_events=(), use_feedback=False):
         res = {}
@@ -81,7 +79,7 @@ class PreCompilation(object):
         ]
 
         for p in self.precomp_input:
-            node = nodes[p]
+            node = nodes.get(p)
 
             if node:
                 probability = self._find_probability(marked_probabilities, p)
@@ -99,13 +97,17 @@ class PreCompilation(object):
 
         return None
 
-    @staticmethod
-    def _get_node_from_str(knowledge, prolog_str, in_dict='named'):
-        for name, node in knowledge._names[in_dict].items():
-            if prolog_str.strip()[:-1].replace(' ', '') == str(name):
-                return node
+    def _get_nodes_for(self, knowledge, in_dict='named'):
+        parsed_knowledge = {
+            str(name): node
+            for name, node in knowledge._names[in_dict].items()
+        }
 
-        return None
+        return {
+            i: parsed_knowledge[i.split('::')[1].strip()[:-1].replace(' ', '')]
+            for i in self.precomp_input
+            if i.split('::')[1].strip()[:-1].replace(' ', '') in parsed_knowledge
+        }
 
 
 class PreCompilationArguments(object):

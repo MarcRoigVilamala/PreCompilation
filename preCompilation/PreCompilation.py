@@ -8,14 +8,16 @@ from problog.program import PrologString
 
 
 class PreCompilation(object):
-    def __init__(self, precomp_args, model):
+    def __init__(self, precomp_args, model, semiring=None):
         self.precomp_input = [e.for_mock_model() for e in precomp_args.input_clauses]
 
         model = model + '\n' + '\n'.join(self.precomp_input)
 
+        self.semiring = semiring
+
         self.precompilations = {}
         for query in precomp_args.queries:
-            compiled_model = self._compile_model_with(model, query)
+            compiled_model = self._compile_model_with(model, query, semiring)
 
             nodes = self._get_nodes_for(compiled_model)
 
@@ -26,11 +28,11 @@ class PreCompilation(object):
             }
 
     @staticmethod
-    def _compile_model_with(model, query):
+    def _compile_model_with(model, query, semiring):
         prolog_string = PrologString(query.create_from_model(model))
 
         # return get_evaluatable(name='ddnnf').create_from(prolog_string, semiring=SemiringSymbolic())
-        return get_evaluatable(name='ddnnf').create_from(prolog_string)
+        return get_evaluatable(name='ddnnf').create_from(prolog_string, semiring=semiring)
 
     def perform_queries(self, queries, input_events=(), use_feedback=False):
         res = {}
@@ -49,7 +51,7 @@ class PreCompilation(object):
 
             self._update_knowledge_with(knowledge, input_events, timestamp_difference, precompilation['nodes'])
 
-            evaluation = knowledge.evaluate()
+            evaluation = knowledge.evaluate(semiring=self.semiring)
 
             # Fix the evaluation to have the correct output timestamps
             fixed_evaluation = {}

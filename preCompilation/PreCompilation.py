@@ -35,9 +35,9 @@ class PreCompilation(object):
         prolog_string = PrologString(query.create_from_model(model))
 
         # return get_evaluatable(name='ddnnf').create_from(prolog_string, semiring=SemiringSymbolic())
-        return get_evaluatable(name='ddnnf').create_from(prolog_string, semiring=semiring)
+        return get_evaluatable(semiring=semiring).create_from(prolog_string, semiring=semiring)
 
-    def perform_queries(self, queries, input_events=(), use_feedback=False):
+    def perform_queries(self, queries, input_events=(), use_feedback=False, modify_out_probability=None):
         res = {}
 
         input_events = list(input_events)
@@ -53,8 +53,8 @@ class PreCompilation(object):
             knowledge = precompilation['model']
 
             self._update_knowledge_with(
-                knowledge, input_events, timestamp_difference, precompilation['nodes'],
-                precompilation['default_probs']
+                knowledge, input_events, precompilation['nodes'],
+                precompilation['default_probs'], timestamp_difference
             )
 
             evaluation = knowledge.evaluate(semiring=self.semiring)
@@ -65,6 +65,9 @@ class PreCompilation(object):
                 # new_k = Term(k.functor, k.args[0], Constant(k.args[1].functor + timestamp_difference))
                 new_k = query.update_result_timestamp(k, timestamp_difference)
 
+                if modify_out_probability:
+                    v = modify_out_probability(v)
+
                 fixed_evaluation[new_k] = v
 
             res.update(fixed_evaluation)
@@ -74,11 +77,11 @@ class PreCompilation(object):
 
         return res
 
-    def _update_knowledge_with(self, knowledge, input_events, timestamp_difference, nodes, default_probs):
+    def _update_knowledge_with(self, knowledge, input_events, nodes, default_probs, timestamp_difference):
         marked_probabilities = {
             e.to_problog_with(
                 timestamp=e.timestamp - timestamp_difference,
-                probability=0.0
+                probability=e.zero_probability()
             ).replace(' ', ''): e.generate_probability()
             for e in input_events
         }
@@ -148,10 +151,22 @@ class PreCompilationArguments(object):
 
 
 class InputClause(object):
-    def __init__(self, identifier, timestamp, probability=0.0):
+    semiring = None
+
+    def __init__(self, identifier, timestamp, probability=None):
         self.identifier = identifier
         self.timestamp = timestamp
+
+        if probability is None:
+            probability = self.zero_probability()
         self.probability = probability
+
+    @classmethod
+    def zero_probability(cls):
+        if cls.semiring is None:
+            return 0.0
+
+        return cls.semiring.parse(cls.semiring.zero())
 
     def get_clause_format(self):
         raise NotImplementedError(

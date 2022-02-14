@@ -8,7 +8,7 @@ class FeedbackClause(InputClause):
         return '{probability}::{identifier}({timestamp}).\n'
 
     def for_mock_model(self):
-        return self.to_problog_with(probability=0.0)
+        return self.to_problog_with(probability=self.zero_probability())
 
 
 class FeedbackQuery(Query):
@@ -29,11 +29,9 @@ class FeedbackQuery(Query):
         ]
 
 
-if __name__ == '__main__':
-    problog_code = '''
-        atTime(T) :- Tprev is T - 1, Tprev >= 0, atTime(Tprev), \\+decrease(T).
-        atTime(T) :- increase(T).
-    '''
+def generate_feedback_precompilation(filename='example2.pl'):
+    with open(filename, 'r') as f:
+        problog_code = ''.join([l for l in f])
 
     input_clauses = [FeedbackClause('atTime', 0), FeedbackClause('increase', 1), FeedbackClause('decrease', 1)]
 
@@ -46,7 +44,11 @@ if __name__ == '__main__':
         queries=queries
     )
 
-    precomp = PreCompilation(precomp_args, problog_code)
+    return PreCompilation(precomp_args, problog_code)
+
+
+if __name__ == '__main__':
+    precomp = generate_feedback_precompilation()
 
     results = precomp.perform_queries(
         queries=[

@@ -6,4 +6,5 @@ setup(
     packages=['preCompilation'],
     license='MIT License',
     long_description=open('README.md').read(),
+    requires=['problog']
 )

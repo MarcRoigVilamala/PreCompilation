@@ -1,4 +1,4 @@
-# ProbLogPrecompilation
+# PreCompilation
 
 This project allows the use of PreCompilation of ProbLog, which can be useful when trying to perform queries on ProbLog 
 with the same logic rules but different knowledge bases.
